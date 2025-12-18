@@ -1,4 +1,4 @@
-// OpenAPI/Swagger parser for BOLA-Fuzz
+// OpenAPI/Swagger parser for Doppel
 // Uses serde_json to parse openapi.json files
 
 use serde_json::Value;

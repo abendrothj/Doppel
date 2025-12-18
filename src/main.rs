@@ -1,27 +1,17 @@
-// Main CLI entry point for BOLA-Fuzz
+// Main CLI entry point for Doppel
 // Uses clap for argument parsing
 
-mod models;
-mod parsers;
-mod engine;
-mod verdict;
-mod ollama;
-mod auth;
-mod params;
-mod mutator;
-mod response_analysis;
-mod reporting;
 use clap::{Arg, Command};
-use crate::models::{CollectionParser, Endpoint};
-use crate::parsers::{BrunoParser, PostmanParser, OpenApiParser};
-use crate::engine::AttackEngine;
-use crate::verdict::{decide_verdict, Verdict};
-use crate::ollama::OllamaAnalyzer;
-use crate::auth::{StaticTokenAuth, AuthStrategy};
-use crate::params::substitute_params;
-use crate::mutator::mutate_param;
-use crate::response_analysis::analyze_response_soft_fails;
-use crate::reporting::{export_csv, export_markdown};
+use doppel::models::{CollectionParser, Endpoint};
+use doppel::parsers::{BrunoParser, PostmanParser, OpenApiParser};
+use doppel::engine::AttackEngine;
+use doppel::verdict::{decide_verdict, Verdict};
+use doppel::ollama::OllamaAnalyzer;
+use doppel::auth::{StaticTokenAuth, AuthStrategy};
+use doppel::params::substitute_params;
+use doppel::mutator::mutate_param;
+use doppel::response_analysis::analyze_response_soft_fails;
+use doppel::reporting::{export_csv, export_markdown};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::path::Path;
@@ -57,13 +47,29 @@ fn extract_user_id_from_jwt(token: &str) -> Option<String> {
     None
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extract_user_id_sub() {
+        // header.payload.signature ; payload contains {"sub":"user_42"}
+        let payload = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(r"{".as_bytes());
+        // build a fake token with base64 payload for sub
+        let fake_payload = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(b"{\"sub\":\"user_42\"}");
+        let token = format!("aaa.{}.ccc", fake_payload);
+        let id = extract_user_id_from_jwt(&token);
+        assert_eq!(id.unwrap(), "user_42");
+    }
+}
+
 #[tokio::main]
 async fn main() {
-    let matches = Command::new("bola-fuzz")
+    let matches = Command::new("doppel")
         .version("0.1.0")
         .author("Jake Abendroth")
         .about("Automated BOLA/IDOR vulnerability scanner for APIs")
-        .after_help("EXAMPLES:\n  bola-fuzz --input my.postman.json --base-url http://localhost:3000 --attacker-token TOKEN --victim-id 123\n  bola-fuzz -i bruno/ -b http://api/ -a TOKEN -v 456 --no-mutational-fuzzing --no-pii-analysis\n\nOPTIONS:\n  --no-mutational-fuzzing   Disable mutational fuzzing\n  --no-pii-analysis         Disable Ollama PII analysis\n  --no-soft-fail-analysis   Disable soft fail response analysis\n  --csv-report              Output CSV report (default: on)\n  --markdown-report         Output Markdown report (default: on)\n  --pdf-report              Output PDF report (default: off)")
+        .after_help("EXAMPLES:\n  doppel --input my.postman.json --base-url http://localhost:3000 --attacker-token TOKEN --victim-id 123\n  doppel -i bruno/ -b http://api/ -a TOKEN -v 456 --no-mutational-fuzzing --no-pii-analysis\n\nOPTIONS:\n  --no-mutational-fuzzing   Disable mutational fuzzing\n  --no-pii-analysis         Disable Ollama PII analysis\n  --no-soft-fail-analysis   Disable soft fail response analysis\n  --csv-report              Output CSV report (default: on)\n  --markdown-report         Output Markdown report (default: on)\n  --pdf-report              Output PDF report (default: off)")
         .arg(Arg::new("input")
             .short('i')
             .long("input")

@@ -1,4 +1,4 @@
-// Authentication strategies for BOLA-Fuzz
+// Authentication strategies for Doppel
 // Supports static tokens, API keys, OAuth2, cookies, and session-based auth
 
 pub enum AuthType {

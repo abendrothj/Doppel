@@ -1,4 +1,14 @@
-# ⚔️ BOLA-Fuzz: Automated Authorization Testing
+# ⚔️ Doppel: Automated Authorization Testing
+```text
+██████╗  ██████╗ ██████╗ ██████╗ ███████╗██╗
+██╔══██╗██╔═══██╗██╔══██╗██╔══██╗██╔════╝██║
+██║  ██║██║   ██║██████╔╝██████╔╝█████╗  ██║
+██║  ██║██║   ██║██╔═══╝ ██╔═══╝ ██╔══╝  ██║
+██████╔╝╚██████╔╝██║     ██║     ███████╗███████╗
+╚═════╝  ╚═════╝ ╚═╝     ╚═╝     ╚══════╝╚══════╝
+        > API Identity Swapper & BOLA Detector <
+```
+
 
 > **A logic-aware API security tool built in Rust.** Automatically detects **Broken Object Level Authorization (BOLA/IDOR)** vulnerabilities by replaying Bruno, Postman, and OpenAPI collections with swapped session contexts.
 
@@ -11,7 +21,7 @@
 
 Traditional vulnerability scanners (like OWASP ZAP) struggle with **logic flaws**. They don't understand that User A *shouldn't* be able to see User B's data if the server returns a `200 OK`.
 
-**BOLA-Fuzz** solves this by understanding your API's "ownership" context. It takes two valid user sessions and attempts to cross-pollinate their requests.
+**Doppel** solves this by understanding your API's "ownership" context. It takes two valid user sessions and attempts to cross-pollinate their requests.
 
 ## ✨ Key Features
 
@@ -48,7 +58,7 @@ cargo build --release
 Run the fuzzer against your local or staging API:
 
 ```bash
-./target/release/bola_fuzz \
+./target/release/doppel \
   --input "./api-specs/openapi.json" \
   --base-url "http://localhost:3000" \
   --attacker-token "eyJhbGc..." \
@@ -59,7 +69,7 @@ Run the fuzzer against your local or staging API:
 
 **OpenAPI/Swagger:**
 ```bash
-./target/release/bola_fuzz \
+./target/release/doppel \
   --input "./docs/openapi.json" \
   --base-url "https://api.example.com" \
   --attacker-token "$ATTACKER_TOKEN" \
@@ -68,7 +78,7 @@ Run the fuzzer against your local or staging API:
 
 **Bruno Collections:**
 ```bash
-./target/release/bola_fuzz \
+./target/release/doppel \
   --input "./bruno" \
   --base-url "http://localhost:3000" \
   --attacker-token "$ATTACKER_TOKEN" \
@@ -77,7 +87,7 @@ Run the fuzzer against your local or staging API:
 
 **Postman Collections:**
 ```bash
-./target/release/bola_fuzz \
+./target/release/doppel \
   --input "./postman_collection.json" \
   --base-url "http://localhost:3000" \
   --attacker-token "$ATTACKER_TOKEN" \
@@ -87,7 +97,7 @@ Run the fuzzer against your local or staging API:
 ### Advanced Options
 
 ```bash
-./target/release/bola_fuzz \
+./target/release/doppel \
   --input "./openapi.json" \
   --base-url "https://staging-api.example.com" \
   --attacker-token "$ATTACKER_TOKEN" \
@@ -127,7 +137,7 @@ graph TD
 
 ### External File References
 
-BOLA-Fuzz supports external `$ref` resolution across files:
+Doppel supports external `$ref` resolution across files:
 
 ```json
 {
@@ -227,10 +237,10 @@ cargo test -- --nocapture
 
 ## 📊 Example Report
 
-### Markdown Report (`bola_fuzz_report.md`)
+### Markdown Report (`doppel_report.md`)
 
 ```markdown
-# BOLA-Fuzz Security Report
+# Doppel Security Report
 
 ## Summary
 - Total Endpoints Tested: 15
@@ -253,7 +263,7 @@ cargo test -- --nocapture
 - **Issue:** Horizontal privilege escalation detected
 ```
 
-### CSV Report (`bola_fuzz_report.csv`)
+### CSV Report (`doppel_report.csv`)
 
 ```csv
 Endpoint,Payload,Verdict
@@ -267,7 +277,7 @@ POST /api/payments,payment_data,UNCERTAIN
 ### GitHub Actions
 
 ```yaml
-name: BOLA Security Scan
+name: Doppel Security Scan
 
 on: [pull_request]
 
@@ -282,12 +292,12 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Run BOLA-Fuzz
+      - name: Build & Run Doppel
         run: |
-          cd security/bola_fuzz
+          cd Doppel
           cargo build --release
-          ./target/release/bola_fuzz \
-            --input ../../docs/openapi.json \
+          ./target/release/doppel \
+            --input ../docs/openapi.json \
             --base-url ${{ secrets.STAGING_URL }} \
             --attacker-token ${{ secrets.TEST_ATTACKER }} \
             --victim-id ${{ secrets.TEST_VICTIM }}
@@ -296,7 +306,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: security-report
-          path: security/bola_fuzz/bola_fuzz_report.md
+          path: Doppel/doppel_report.md
 ```
 
 ### Pre-commit Hook
@@ -305,15 +315,15 @@ jobs:
 #!/bin/bash
 # .git/hooks/pre-commit
 
-cd security/bola_fuzz
+cd Doppel
 cargo run -- \
-  --input ../../docs/openapi.json \
+  --input ../docs/openapi.json \
   --base-url http://localhost:3000 \
   --attacker-token "$ATTACKER_TOKEN" \
   --victim-id "test_victim"
 
 if [ $? -ne 0 ]; then
-  echo "❌ BOLA vulnerabilities detected!"
+  echo "❌ Doppel vulnerabilities detected!"
   exit 1
 fi
 ```
@@ -335,7 +345,7 @@ fi
 
 ## 🔒 Privacy & Security
 
-BOLA-Fuzz defaults to using a local LLM (Ollama) for any PII or sensitive-data analysis.
+Doppel defaults to using a local LLM (Ollama) for any PII or sensitive-data analysis.
 
 **Important:**
 - Never run against production APIs without explicit authorization

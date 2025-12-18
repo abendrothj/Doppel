@@ -1,4 +1,4 @@
-// Bruno collection parser for BOLA-Fuzz
+// Bruno collection parser for Doppel
 // Uses walkdir and regex to extract endpoints from .bru files
 
 use walkdir::WalkDir;

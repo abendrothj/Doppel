@@ -1,5 +1,5 @@
 [package]
-name = "Doppel"
+name = "doppel"
 version = "0.1.0"
 edition = "2021"
 authors = ["Jake Abendroth"]

@@ -1,4 +1,4 @@
-// Advanced parameter handling for BOLA-Fuzz
+// Advanced parameter handling for Doppel
 // Supports nested/complex parameters in JSON bodies, arrays, and objects
 
 use serde_json::Value;
@@ -20,5 +20,22 @@ pub fn substitute_params(json: &mut Value, param_map: &std::collections::HashMap
             }
         }
         _ => {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn substitute_simple_key() {
+        let mut v = json!({ "userId": "OLD", "nested": { "id": "OLD" } });
+        let mut map = std::collections::HashMap::new();
+        map.insert("userId".to_string(), "NEW_USER".to_string());
+        map.insert("id".to_string(), "NEW_ID".to_string());
+        substitute_params(&mut v, &map);
+        assert_eq!(v["userId"], json!("NEW_USER"));
+        assert_eq!(v["nested"]["id"], json!("NEW_ID"));
     }
 }

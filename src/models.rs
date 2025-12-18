@@ -1,4 +1,4 @@
-// Core data models and traits for BOLA-Fuzz
+// Core data models and traits for Doppel
 
 /// Supported HTTP methods
 #[derive(Debug, Clone, PartialEq, Eq)]

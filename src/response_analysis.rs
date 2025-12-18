@@ -1,4 +1,4 @@
-// Response analysis for BOLA-Fuzz
+// Response analysis for Doppel
 // Heuristics for soft fails and binary/file detection
 
 /// Analyze the response body text for soft-fail heuristics and binary detection.

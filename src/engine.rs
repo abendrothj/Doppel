@@ -1,4 +1,4 @@
-// Async HTTP engine for BOLA-Fuzz
+// Async HTTP engine for Doppel
 // Uses reqwest and tokio for concurrent requests
 
 use reqwest::{Client, Response};

@@ -1,4 +1,4 @@
-// Postman collection parser for BOLA-Fuzz
+// Postman collection parser for Doppel
 // Uses serde_json to recursively parse Postman Collection v2.1 exports
 
 use serde_json::Value;

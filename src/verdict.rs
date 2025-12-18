@@ -1,4 +1,4 @@
-// Verdict engine for BOLA-Fuzz
+// Verdict engine for Doppel
 // Decides if a response is vulnerable, secure, or uncertain
 
 use serde_json::Value;

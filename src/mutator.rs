@@ -1,4 +1,4 @@
-// Mutational fuzzing for BOLA-Fuzz
+// Mutational fuzzing for Doppel
 // Injects common attack payloads into parameters
 
 pub fn mutate_param(param: &str) -> Vec<String> {

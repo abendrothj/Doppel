@@ -1,4 +1,4 @@
-// Ollama integration for BOLA-Fuzz
+// Ollama integration for Doppel
 // Uses a local LLM (Ollama) to analyze JSON responses for sensitive PII
 
 use reqwest::Client;

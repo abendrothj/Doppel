@@ -1,4 +1,4 @@
-# 🗺️ Development Plan: BOLA-Fuzz
+# 🗺️ Development Plan: Doppel
 
 **Objective:** Build a high-performance, open-source security tool to detect BOLA/IDOR vulnerabilities in Fintech APIs.
 **Target Release:** v1.0 (MVP)

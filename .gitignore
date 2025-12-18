@@ -1,6 +1,6 @@
 target/
 *.log
-bola_fuzz_report.*
+doppel_report.*
 build/
 **/target/
 *.sh
