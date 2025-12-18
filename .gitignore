@@ -1,0 +1,7 @@
+target/
+*.log
+bola_fuzz_report.*
+build/
+**/target/
+*.sh
+*.log
