@@ -74,6 +74,19 @@ impl OpenApiParser {
         // Normalize path
         let canonical_path = resolved_path.canonicalize().ok()?;
 
+        // Security: Prevent path traversal attacks
+        // Ensure the resolved path is within the spec directory
+        if let Some(base) = base_path {
+            if let Some(spec_dir) = base.parent() {
+                if let Ok(canonical_spec_dir) = spec_dir.canonicalize() {
+                    if !canonical_path.starts_with(&canonical_spec_dir) {
+                        eprintln!("Security warning: Rejected external reference attempting path traversal: {}", file_path);
+                        return None;
+                    }
+                }
+            }
+        }
+
         // Check cache first
         if !cache.contains_key(&canonical_path) {
             // Load external file

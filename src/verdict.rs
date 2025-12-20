@@ -134,6 +134,7 @@ fn contains_identifier_in_identity_fields(value: &Value, identifier: &str) -> bo
 }
 
 /// Recursively search for an identifier in JSON value
+#[allow(dead_code)]
 fn contains_identifier(value: &Value, identifier: &str) -> bool {
     match value {
         Value::String(s) => s.contains(identifier),

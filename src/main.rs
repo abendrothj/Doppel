@@ -2,13 +2,12 @@
 // Uses clap for argument parsing
 
 use clap::{Arg, Command};
-use doppel::models::{CollectionParser, Endpoint};
+use doppel::models::CollectionParser;
 use doppel::parsers::{BrunoParser, PostmanParser, OpenApiParser};
 use doppel::engine::AttackEngine;
 use doppel::verdict::{decide_verdict, Verdict};
 use doppel::ollama::OllamaAnalyzer;
 use doppel::auth::{StaticTokenAuth, AuthStrategy};
-use doppel::params::substitute_params;
 use doppel::mutator::mutate_param;
 use doppel::response_analysis::analyze_response_soft_fails;
 use doppel::reporting::{export_csv, export_markdown};
@@ -54,7 +53,6 @@ mod tests {
     #[test]
     fn extract_user_id_sub() {
         // header.payload.signature ; payload contains {"sub":"user_42"}
-        let payload = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(r"{".as_bytes());
         // build a fake token with base64 payload for sub
         let fake_payload = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(b"{\"sub\":\"user_42\"}");
         let token = format!("aaa.{}.ccc", fake_payload);
@@ -69,7 +67,7 @@ async fn main() {
         .version("0.1.0")
         .author("Jake Abendroth")
         .about("Automated BOLA/IDOR vulnerability scanner for APIs")
-        .after_help("EXAMPLES:\n  doppel --input my.postman.json --base-url http://localhost:3000 --attacker-token TOKEN --victim-id 123\n  doppel -i bruno/ -b http://api/ -a TOKEN -v 456 --no-mutational-fuzzing --no-pii-analysis\n\nOPTIONS:\n  --no-mutational-fuzzing   Disable mutational fuzzing\n  --no-pii-analysis         Disable Ollama PII analysis\n  --no-soft-fail-analysis   Disable soft fail response analysis\n  --csv-report              Output CSV report (default: on)\n  --markdown-report         Output Markdown report (default: on)\n  --pdf-report              Output PDF report (default: off)")
+        .after_help("EXAMPLES:\n  doppel --input my.postman.json --base-url http://localhost:3000 --attacker-token TOKEN --victim-id 123\n  doppel -i bruno/ -b http://api/ -a TOKEN -v 456 --no-mutational-fuzzing --enable-pii-analysis\n\nOPTIONS:\n  --no-mutational-fuzzing   Disable mutational fuzzing\n  --enable-pii-analysis     Enable Ollama PII analysis (default: off, sends data to localhost:11434)\n  --no-soft-fail-analysis   Disable soft fail response analysis\n  --csv-report              Output CSV report (default: on)\n  --markdown-report         Output Markdown report (default: on)\n  --pdf-report              Output PDF report (default: off)")
         .arg(Arg::new("input")
             .short('i')
             .long("input")
@@ -103,10 +101,10 @@ async fn main() {
             .long("no-mutational-fuzzing")
             .action(clap::ArgAction::SetTrue)
             .help("Disable mutational fuzzing"))
-        .arg(Arg::new("no_pii_analysis")
-            .long("no-pii-analysis")
+        .arg(Arg::new("enable_pii_analysis")
+            .long("enable-pii-analysis")
             .action(clap::ArgAction::SetTrue)
-            .help("Disable Ollama PII analysis"))
+            .help("Enable Ollama PII analysis (WARNING: Sends response data to localhost:11434 - ensure Ollama is running locally)"))
         .arg(Arg::new("no_soft_fail_analysis")
             .long("no-soft-fail-analysis")
             .action(clap::ArgAction::SetTrue)
@@ -132,8 +130,15 @@ async fn main() {
     let victim_id = matches.get_one::<String>("victim_id").expect("victim_id is required");
     let ollama_model = matches.get_one::<String>("ollama_model").map(|s| s.as_str()).unwrap_or("llama2");
     let mutational_fuzzing = !matches.get_flag("no_mutational_fuzzing");
-    let pii_analysis = !matches.get_flag("no_pii_analysis");
+    let pii_analysis = matches.get_flag("enable_pii_analysis");
     let soft_fail_analysis = !matches.get_flag("no_soft_fail_analysis");
+
+    // Warn user about PII analysis security implications
+    if pii_analysis {
+        eprintln!("⚠️  WARNING: PII analysis is enabled. Response data will be sent to http://localhost:11434");
+        eprintln!("   Ensure Ollama is running LOCALLY ONLY and not exposed to external networks.");
+        eprintln!("   This feature sends potentially sensitive data to the LLM for analysis.\n");
+    }
     let csv_report = matches.get_flag("csv_report") || (!matches.get_flag("markdown_report") && !matches.get_flag("pdf_report"));
     let markdown_report = matches.get_flag("markdown_report") || (!matches.get_flag("csv_report") && !matches.get_flag("pdf_report"));
     let pdf_report = matches.get_flag("pdf_report");
@@ -217,7 +222,14 @@ async fn main() {
             }
 
             // Build request with authentication
-            let mut req = engine.client.request(method.parse().unwrap(), &url);
+            let http_method = match method.parse() {
+                Ok(m) => m,
+                Err(e) => {
+                    eprintln!("[ERROR] Invalid HTTP method '{}': {}", method, e);
+                    continue;
+                }
+            };
+            let mut req = engine.client.request(http_method, &url);
             req = auth.apply_auth(req);
 
             // Add query parameters
@@ -273,9 +285,33 @@ async fn main() {
         }
     }
 
+    // Count vulnerabilities for exit code
+    let vulnerability_count = results.iter()
+        .filter(|(_, _, verdict)| verdict.starts_with("VULNERABLE"))
+        .count();
+
     // Export results
-    if csv_report { export_csv(&results); }
-    if markdown_report { export_markdown(&results); }
+    if csv_report {
+        match export_csv(&results) {
+            Ok(filename) => println!("CSV report saved to: {}", filename),
+            Err(e) => eprintln!("Failed to create CSV report: {}", e),
+        }
+    }
+    if markdown_report {
+        match export_markdown(&results) {
+            Ok(filename) => println!("Markdown report saved to: {}", filename),
+            Err(e) => eprintln!("Failed to create Markdown report: {}", e),
+        }
+    }
     if pdf_report { /* TODO: export_pdf(&results); */ }
-    // TODO: Export SARIF, etc.
+
+    // Print summary
+    println!("\n=== SCAN SUMMARY ===");
+    println!("Total endpoints tested: {}", results.len());
+    println!("Vulnerabilities found: {}", vulnerability_count);
+
+    // Exit with code 1 if vulnerabilities were found (for CI/CD)
+    if vulnerability_count > 0 {
+        std::process::exit(1);
+    }
 }

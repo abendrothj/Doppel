@@ -3,24 +3,30 @@
 
 use walkdir::WalkDir;
 use regex::Regex;
+use lazy_static::lazy_static;
 use crate::models::{Endpoint, Method, CollectionParser};
+
+lazy_static! {
+    static ref METHOD_REGEX: Regex = Regex::new(r#"method"\s*:\s*"(GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD)"#)
+        .expect("Failed to compile METHOD_REGEX");
+    static ref URL_REGEX: Regex = Regex::new(r#"url"\s*:\s*"([^"]+)"#)
+        .expect("Failed to compile URL_REGEX");
+}
 
 pub struct BrunoParser;
 
 impl CollectionParser for BrunoParser {
     fn parse(&self, dir_path: &str) -> Result<Vec<Endpoint>, String> {
         let mut endpoints = Vec::new();
-        let method_regex = Regex::new(r#"method"\s*:\s*"(GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD)"#).unwrap();
-        let url_regex = Regex::new(r#"url"\s*:\s*"([^"]+)"#).unwrap();
 
         for entry in WalkDir::new(dir_path).into_iter().filter_map(|e| e.ok()) {
             if entry.path().extension().map_or(false, |ext| ext == "bru") {
                 let content = std::fs::read_to_string(entry.path())
                     .map_err(|e| format!("Failed to read {:?}: {}", entry.path(), e))?;
-                let method = method_regex.captures(&content)
+                let method = METHOD_REGEX.captures(&content)
                     .and_then(|cap| cap.get(1))
                     .map(|m| m.as_str().to_string());
-                let url = url_regex.captures(&content)
+                let url = URL_REGEX.captures(&content)
                     .and_then(|cap| cap.get(1))
                     .map(|u| u.as_str().to_string());
                 if let (Some(method), Some(url)) = (method, url) {

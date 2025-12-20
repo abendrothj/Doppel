@@ -1,5 +1,7 @@
 // Core data models and traits for Doppel
 
+use std::fmt;
+
 /// Supported HTTP methods
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Method {
@@ -10,6 +12,20 @@ pub enum Method {
     PATCH,
     OPTIONS,
     HEAD,
+}
+
+impl fmt::Display for Method {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Method::GET => write!(f, "GET"),
+            Method::POST => write!(f, "POST"),
+            Method::PUT => write!(f, "PUT"),
+            Method::DELETE => write!(f, "DELETE"),
+            Method::PATCH => write!(f, "PATCH"),
+            Method::OPTIONS => write!(f, "OPTIONS"),
+            Method::HEAD => write!(f, "HEAD"),
+        }
+    }
 }
 
 /// Parameter location in the request
