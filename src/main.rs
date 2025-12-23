@@ -192,6 +192,16 @@ async fn main() {
     let auth = StaticTokenAuth { token: attacker_token.to_string() };
     let ollama = OllamaAnalyzer::new(ollama_model.to_string());
 
+    // Warm up Ollama if PII analysis is enabled (speeds up first request)
+    if pii_analysis {
+        if let Err(e) = ollama.warmup().await {
+            eprintln!("⚠️  Ollama warmup failed: {}. PII analysis may be slow or unavailable.", e);
+            eprintln!("    Make sure Ollama is running locally with: ollama serve");
+        } else {
+            println!("✓ Ollama warmed up successfully");
+        }
+    }
+
     let mut results = Vec::new();
     let mut total_high_risk_params = 0;
 
@@ -300,12 +310,19 @@ async fn main() {
                             result_str.push_str(&format!(" | {}", soft_fail));
                         }
                     }
-                    // PII analysis for vulnerable (attempt JSON parse)
+                    // PII analysis for vulnerable responses (attempt JSON parse)
                     if pii_analysis {
                         if let Verdict::Vulnerable = verdict {
                             if let Ok(json) = serde_json::from_str::<Value>(&body_text) {
-                                if let Ok(analysis) = ollama.analyze_response(&json).await {
-                                    result_str.push_str(&format!(" | PII: {}", analysis));
+                                match ollama.analyze_response(&json).await {
+                                    Ok(analysis) => {
+                                        let pii_status = if analysis.contains_pii { "YES" } else { "NO" };
+                                        result_str.push_str(&format!(" | PII: {}", pii_status));
+                                    }
+                                    Err(e) => {
+                                        eprintln!("[WARN] PII analysis failed for {}: {}", url, e);
+                                        result_str.push_str(" | PII: ERROR");
+                                    }
                                 }
                             }
                         }
