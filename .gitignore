@@ -5,3 +5,10 @@ build/
 **/target/
 *.sh
 *.log
+doppel_report*.*
+*.tmp
+*.bak
+.DS_Store
+.idea/
+.vscode/
+*.iml

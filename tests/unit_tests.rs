@@ -126,6 +126,7 @@ fn test_parameter_creation() {
         name: "user_id".to_string(),
         location: ParameterLocation::Path,
         required: true,
+        schema_type: Some("string".to_string()),
     };
 
     assert_eq!(param.name, "user_id");
@@ -140,24 +141,28 @@ fn test_parameter_locations() {
         name: "id".to_string(),
         location: ParameterLocation::Path,
         required: true,
+        schema_type: Some("string".to_string()),
     };
 
     let query_param = Parameter {
         name: "filter".to_string(),
         location: ParameterLocation::Query,
         required: false,
+        schema_type: Some("string".to_string()),
     };
 
     let body_param = Parameter {
         name: "data".to_string(),
         location: ParameterLocation::Body,
         required: true,
+        schema_type: Some("object".to_string()),
     };
 
     let header_param = Parameter {
         name: "Authorization".to_string(),
         location: ParameterLocation::Header,
         required: true,
+        schema_type: Some("string".to_string()),
     };
 
     assert_eq!(path_param.location, ParameterLocation::Path);
@@ -173,12 +178,14 @@ fn test_parameter_required_flag() {
         name: "id".to_string(),
         location: ParameterLocation::Path,
         required: true,
+        schema_type: Some("string".to_string()),
     };
 
     let optional_param = Parameter {
         name: "page".to_string(),
         location: ParameterLocation::Query,
         required: false,
+        schema_type: Some("integer".to_string()),
     };
 
     assert_eq!(required_param.required, true);
@@ -277,6 +284,7 @@ fn test_parameter_clone() {
         name: "test".to_string(),
         location: ParameterLocation::Query,
         required: true,
+        schema_type: Some("string".to_string()),
     };
 
     let param2 = param1.clone();

@@ -1,5 +1,18 @@
-// Advanced parameter handling for Doppel
-// Supports nested/complex parameters in JSON bodies, arrays, and objects
+// Parameter Value Substitution
+//
+// RUNTIME parameter value manipulation for JSON request bodies.
+// Handles nested objects and arrays during fuzzing mutations.
+//
+// This module is responsible for REPLACING parameter values in JSON structures
+// at runtime during attack execution. It does NOT classify or analyze parameters
+// (see param_detector.rs and param_analyzer.rs for that).
+//
+// Example:
+//   Input:  {"userId": "attacker_123", "nested": {"id": "old"}}
+//   Map:    {"userId" => "victim_456", "id" => "victim_456"}
+//   Output: {"userId": "victim_456", "nested": {"id": "victim_456"}}
+//
+// Used by: main.rs during request building and fuzzing
 
 use serde_json::Value;
 

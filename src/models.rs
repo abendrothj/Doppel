@@ -43,6 +43,7 @@ pub struct Parameter {
     pub name: String,
     pub location: ParameterLocation,
     pub required: bool,
+    pub schema_type: Option<String>,  // e.g., "string", "integer", "object"
 }
 
 /// Represents an API endpoint

@@ -11,6 +11,7 @@ use doppel::auth::{StaticTokenAuth, AuthStrategy};
 use doppel::mutator::mutate_param;
 use doppel::response_analysis::analyze_response_soft_fails;
 use doppel::reporting::{export_csv, export_markdown};
+use doppel::parameters::{get_high_risk_params, get_parameter_summary};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::path::Path;
@@ -121,6 +122,16 @@ async fn main() {
             .long("pdf-report")
             .action(clap::ArgAction::SetTrue)
             .help("Output PDF report (default: off)"))
+        .arg(Arg::new("min_risk_score")
+            .long("min-risk-score")
+            .num_args(1)
+            .default_value("50")
+            .value_parser(clap::value_parser!(u8))
+            .help("Minimum BOLA risk score (0-100) to test parameters (default: 50, higher = stricter filtering)"))
+        .arg(Arg::new("show_param_analysis")
+            .long("show-param-analysis")
+            .action(clap::ArgAction::SetTrue)
+            .help("Display parameter analysis for each endpoint before testing"))
         .get_matches();
 
 
@@ -142,6 +153,8 @@ async fn main() {
     let csv_report = matches.get_flag("csv_report") || (!matches.get_flag("markdown_report") && !matches.get_flag("pdf_report"));
     let markdown_report = matches.get_flag("markdown_report") || (!matches.get_flag("csv_report") && !matches.get_flag("pdf_report"));
     let pdf_report = matches.get_flag("pdf_report");
+    let min_risk_score = *matches.get_one::<u8>("min_risk_score").unwrap_or(&50);
+    let show_param_analysis = matches.get_flag("show_param_analysis");
 
     // Extract attacker ID from JWT token
     let attacker_id = extract_user_id_from_jwt(attacker_token);
@@ -180,10 +193,30 @@ async fn main() {
     let ollama = OllamaAnalyzer::new(ollama_model.to_string());
 
     let mut results = Vec::new();
+    let mut total_high_risk_params = 0;
 
-    // Attack each endpoint with mutational fuzzing and advanced param handling
+    // Attack each endpoint with mutational fuzzing and smart parameter detection
 
     for endpoint in endpoints {
+        // Analyze parameters using smart detection
+        if show_param_analysis {
+            println!("\n{}", get_parameter_summary(&endpoint));
+        }
+
+        // Get high-risk parameters only (saves time and reduces false positives)
+        let high_risk_params = get_high_risk_params(&endpoint, min_risk_score);
+
+        if high_risk_params.is_empty() {
+            if show_param_analysis {
+                println!("  ⏭️  Skipping endpoint - no parameters meet minimum risk score of {}", min_risk_score);
+            }
+            continue;
+        }
+
+        total_high_risk_params += high_risk_params.len();
+        if show_param_analysis {
+            println!("  ✓ Testing {} high-risk parameter(s)", high_risk_params.len());
+        }
         // If endpoint.path already contains full URL (from OpenAPI servers), use it directly
         // Otherwise, prepend base_url
         let base_path = if endpoint.path.starts_with("http://") || endpoint.path.starts_with("https://") {
@@ -195,12 +228,15 @@ async fn main() {
         let method = format!("{:?}", endpoint.method);
         let fuzz_inputs = if mutational_fuzzing { mutate_param(&victim_id) } else { vec![victim_id.to_string()] };
         for mutated in fuzz_inputs {
-            // Categorize parameters by type
+            // Categorize parameters by type - only test high-risk ones
             let mut path_params = HashMap::new();
             let mut query_params = HashMap::new();
             let mut body_params = HashMap::new();
 
-            for p in &endpoint.params {
+            // Only test high-risk parameters identified by smart detection
+            for detected_param in &high_risk_params {
+                let p = &detected_param.name;
+
                 // Detect parameter type based on naming convention
                 if p.starts_with("body.") {
                     // Body parameter (e.g., "body.firstName")
@@ -308,6 +344,8 @@ async fn main() {
     // Print summary
     println!("\n=== SCAN SUMMARY ===");
     println!("Total endpoints tested: {}", results.len());
+    println!("High-risk parameters identified: {}", total_high_risk_params);
+    println!("Minimum risk score threshold: {}", min_risk_score);
     println!("Vulnerabilities found: {}", vulnerability_count);
 
     // Exit with code 1 if vulnerabilities were found (for CI/CD)
