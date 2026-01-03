@@ -67,11 +67,11 @@ doppel -i specs/ -b https://api.local -a $TOKEN -v 123 --enable-pii-analysis
 * [x] **Zero-Config Discovery:** Parses Bruno (`.bru`), Postman, and OpenAPI files automatically.
 * [x] **Logic-Aware Attacks:** Identifies and swaps resource IDs based on semantic weight.
 * [x] **Weighted Verdict Engine:** Reduces false positives by analyzing JSON field importance.
-* [x] **CI/CD Ready:** Returns exit code `1` on vulnerabilities; outputs CSV/Markdown/SARIF.
+* [x] **CI/CD Ready:** Returns exit code `1` on vulnerabilities; outputs CSV/Markdown.
 
 ## 📦 CI/CD Integration
 
-Doppel is designed to run in GitHub Actions. See `.github/workflows/security-scan.yml` for examples.
+Doppel is designed to run in GitHub Actions. See `.github/workflows/ci.yml` for examples.
 
 ## 🤝 Contributing
 

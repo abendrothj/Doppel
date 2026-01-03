@@ -6,14 +6,14 @@ Doppel now has a comprehensive test suite covering security features, parsers, a
 
 ## Test Statistics
 
-- **Total Tests**: 44 tests across 6 test files
+- **Total Tests**: >100 tests across 6 test files
 - **Test Files**:
   - `tests/security_tests.rs` (7 tests)
   - `tests/openapi_security_tests.rs` (7 tests)
   - `tests/parser_tests.rs` (9 tests)
   - `tests/unit_tests.rs` (18 tests)
   - `tests/reporting_integration.rs` (1 test)
-  - Unit tests in source files (2 tests)
+  - Unit tests in source files (~80 tests)
 
 ## Running Tests
 
@@ -225,9 +225,9 @@ This ensures:
 - ✅ **Parsers**: All three parsers (OpenAPI, Postman, Bruno) tested
 - ✅ **Core Models**: All public methods tested
 - ✅ **Error Handling**: Invalid input and missing files tested
-- ⚠️  **Engine/Scanning**: Integration tests with live APIs (future work)
-- ⚠️  **Authentication**: Auth flow tests (future work)
-- ⚠️  **Response Analysis**: Verdict logic tests (future work)
+- ✅ **Engine/Scanning**: Integration tests with live APIs (`smart_detection_demo.rs`)
+- ⚠️  **Authentication**: Auth flow tests (Basic Bearer only)
+- ✅ **Response Analysis**: Verdict logic tests (`verdict.rs` unit tests)
 
 ## Performance
 
