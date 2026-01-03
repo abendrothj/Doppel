@@ -69,7 +69,7 @@ mod tests {
 #[tokio::main]
 async fn main() {
     let matches = Command::new("doppel")
-        .version("0.1.0")
+        .version(clap::crate_version!())
         .author("Jake Abendroth")
         .about("Automated BOLA/IDOR vulnerability scanner for APIs")
         .after_help("EXAMPLES:\n  doppel --input my.postman.json --base-url http://localhost:3000 --attacker-token TOKEN --victim-id 123\n  doppel -i bruno/ -b http://api/ -a TOKEN -v 456 --no-mutational-fuzzing --enable-pii-analysis\n\nOPTIONS:\n  --no-mutational-fuzzing   Disable mutational fuzzing\n  --enable-pii-analysis     Enable Ollama PII analysis (default: off, sends data to localhost:11434)\n  --no-soft-fail-analysis   Disable soft fail response analysis\n  --csv-report              Output CSV report (default: on)\n  --markdown-report         Output Markdown report (default: on)\n  --pdf-report              Output PDF report (default: off)")
