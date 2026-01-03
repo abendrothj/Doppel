@@ -43,7 +43,7 @@ pub struct Parameter {
     pub name: String,
     pub location: ParameterLocation,
     pub required: bool,
-    pub schema_type: Option<String>,  // e.g., "string", "integer", "object"
+    pub schema_type: Option<String>, // e.g., "string", "integer", "object"
 }
 
 /// Represents an API endpoint
@@ -59,7 +59,12 @@ pub struct Endpoint {
 
 impl Endpoint {
     /// Create a new endpoint with empty parameters list
-    pub fn new(method: Method, path: String, description: Option<String>, params: Vec<String>) -> Self {
+    pub fn new(
+        method: Method,
+        path: String,
+        description: Option<String>,
+        params: Vec<String>,
+    ) -> Self {
         Self {
             method,
             path,

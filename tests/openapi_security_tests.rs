@@ -1,6 +1,5 @@
 /// Security tests specifically for OpenAPI parser
 /// Tests path traversal protection and external reference handling
-
 use doppel::models::CollectionParser;
 use doppel::parsers::openapi::OpenApiParser;
 use std::fs;
@@ -74,7 +73,11 @@ fn test_path_traversal_relative_dotdot() {
     assert!(result.is_ok(), "Should handle directory traversal safely");
     let endpoints = result.unwrap();
     // The malicious parameter reference is rejected, but endpoint is still created
-    assert_eq!(endpoints.len(), 1, "Should parse endpoint without malicious param");
+    assert_eq!(
+        endpoints.len(),
+        1,
+        "Should parse endpoint without malicious param"
+    );
 }
 
 #[test]
@@ -138,8 +141,13 @@ fn test_legitimate_external_ref() {
 
     // Verify external schema was resolved
     let endpoint = &endpoints[0];
-    assert!(endpoint.params.iter().any(|p| p.contains("id") || p.contains("name")),
-        "Should resolve external schema and extract properties");
+    assert!(
+        endpoint
+            .params
+            .iter()
+            .any(|p| p.contains("id") || p.contains("name")),
+        "Should resolve external schema and extract properties"
+    );
 }
 
 #[test]
@@ -208,7 +216,10 @@ fn test_external_ref_caching() {
     let _ = fs::remove_file(&spec_file);
     let _ = fs::remove_dir(test_dir);
 
-    assert!(result.is_ok(), "Should parse with multiple refs to same file");
+    assert!(
+        result.is_ok(),
+        "Should parse with multiple refs to same file"
+    );
     let endpoints = result.unwrap();
     assert_eq!(endpoints.len(), 2, "Should have 2 endpoints");
 }
@@ -231,7 +242,8 @@ fn test_malicious_symlink_traversal() {
         if symlink_result.is_ok() {
             // Create spec that tries to use the symlink
             let spec_file = format!("{}/openapi.json", test_dir);
-            let spec = format!(r#"{{
+            let spec = format!(
+                r#"{{
                 "openapi": "3.0.0",
                 "info": {{"title": "Test", "version": "1.0.0"}},
                 "paths": {{
@@ -243,7 +255,8 @@ fn test_malicious_symlink_traversal() {
                         }}
                     }}
                 }}
-            }}"#);
+            }}"#
+            );
             fs::write(&spec_file, spec).expect("Should write spec file");
 
             let parser = OpenApiParser;

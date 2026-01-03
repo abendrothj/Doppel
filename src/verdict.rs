@@ -19,7 +19,12 @@ pub enum Verdict {
 /// 5. 404 = Context-dependent (could be authorization or missing resource)
 ///
 /// This function analyzes the response to determine if victim data is leaked.
-pub fn decide_verdict(status: u16, body: &str, attacker_id: Option<&str>, victim_id: Option<&str>) -> Verdict {
+pub fn decide_verdict(
+    status: u16,
+    body: &str,
+    attacker_id: Option<&str>,
+    victim_id: Option<&str>,
+) -> Verdict {
     match status {
         // Access denied - properly secured
         401 | 403 => Verdict::Secure,
@@ -112,22 +117,34 @@ fn analyze_response_ownership(body: &str, attacker_id: &str, victim_id: &str) ->
 /// Field classification for weighted identity matching
 #[derive(Debug, PartialEq)]
 enum FieldWeight {
-    Critical,  // id, userId, user_id - direct resource ownership
-    Metadata,  // created_by, updated_by - metadata fields (could be public)
+    Critical, // id, userId, user_id - direct resource ownership
+    Metadata, // created_by, updated_by - metadata fields (could be public)
 }
 
 /// Classify identity field by importance
 fn classify_identity_field(field_name: &str) -> Option<FieldWeight> {
     // Critical fields - direct ownership indicators
     const CRITICAL_FIELDS: &[&str] = &[
-        "id", "userId", "user_id", "uid", "ownerId", "owner_id",
-        "account_id", "accountId",
+        "id",
+        "userId",
+        "user_id",
+        "uid",
+        "ownerId",
+        "owner_id",
+        "account_id",
+        "accountId",
     ];
 
     // Metadata fields - could be public information
     const METADATA_FIELDS: &[&str] = &[
-        "created_by", "createdBy", "updated_by", "updatedBy",
-        "author_id", "authorId", "modified_by", "modifiedBy",
+        "created_by",
+        "createdBy",
+        "updated_by",
+        "updatedBy",
+        "author_id",
+        "authorId",
+        "modified_by",
+        "modifiedBy",
     ];
 
     if CRITICAL_FIELDS.contains(&field_name) {
@@ -149,20 +166,35 @@ struct IdentityMatch {
 /// Check for identifier in identity-specific fields with weighting.
 /// This prevents false positives where the victim ID appears in user-editable data.
 fn contains_identifier_in_identity_fields(value: &Value, identifier: &str) -> bool {
-    match find_identifier_with_weight(value, identifier) {
-        Some(IdentityMatch { found: true, weight: Some(FieldWeight::Critical) }) => true,
-        _ => false,
-    }
+    matches!(
+        find_identifier_with_weight(value, identifier),
+        Some(IdentityMatch {
+            found: true,
+            weight: Some(FieldWeight::Critical),
+        })
+    )
 }
 
 /// Find identifier and return its field weight for nuanced verdict
 fn find_identifier_with_weight(value: &Value, identifier: &str) -> Option<IdentityMatch> {
     // All identity fields (critical + metadata)
     const ALL_IDENTITY_FIELDS: &[&str] = &[
-        "id", "userId", "user_id", "uid", "owner_id", "ownerId",
-        "created_by", "createdBy", "updated_by", "updatedBy",
-        "author_id", "authorId", "account_id", "accountId",
-        "modified_by", "modifiedBy",
+        "id",
+        "userId",
+        "user_id",
+        "uid",
+        "owner_id",
+        "ownerId",
+        "created_by",
+        "createdBy",
+        "updated_by",
+        "updatedBy",
+        "author_id",
+        "authorId",
+        "account_id",
+        "accountId",
+        "modified_by",
+        "modifiedBy",
     ];
 
     match value {
@@ -187,16 +219,32 @@ fn find_identifier_with_weight(value: &Value, identifier: &str) -> Option<Identi
                 // Skip user-editable fields that might contain arbitrary data
                 let is_editable_field = matches!(
                     key.as_str(),
-                    "firstName" | "lastName" | "first_name" | "last_name" |
-                    "name" | "email" | "phone" | "phoneNumber" | "phone_number" |
-                    "address" | "bio" | "description" | "notes" | "content" |
-                    "message" | "text" | "title" | "dateOfBirth" | "date_of_birth"
+                    "firstName"
+                        | "lastName"
+                        | "first_name"
+                        | "last_name"
+                        | "name"
+                        | "email"
+                        | "phone"
+                        | "phoneNumber"
+                        | "phone_number"
+                        | "address"
+                        | "bio"
+                        | "description"
+                        | "notes"
+                        | "content"
+                        | "message"
+                        | "text"
+                        | "title"
+                        | "dateOfBirth"
+                        | "date_of_birth"
                 );
 
                 if !is_editable_field {
                     match val {
                         Value::Object(_) | Value::Array(_) => {
-                            if let Some(match_result) = find_identifier_with_weight(val, identifier) {
+                            if let Some(match_result) = find_identifier_with_weight(val, identifier)
+                            {
                                 if match_result.found {
                                     return Some(match_result);
                                 }
@@ -299,14 +347,24 @@ mod tests {
     #[test]
     fn test_verdict_404_with_auth_message() {
         // 404 with auth-related message - likely proper authorization
-        let verdict = decide_verdict(404, "Resource not found: access denied", Some("attacker"), Some("victim"));
+        let verdict = decide_verdict(
+            404,
+            "Resource not found: access denied",
+            Some("attacker"),
+            Some("victim"),
+        );
         assert!(matches!(verdict, Verdict::Secure));
     }
 
     #[test]
     fn test_verdict_404_with_unauthorized() {
         // 404 with "unauthorized" - proper authorization
-        let verdict = decide_verdict(404, "404: Unauthorized to view this resource", Some("attacker"), Some("victim"));
+        let verdict = decide_verdict(
+            404,
+            "404: Unauthorized to view this resource",
+            Some("attacker"),
+            Some("victim"),
+        );
         assert!(matches!(verdict, Verdict::Secure));
     }
 

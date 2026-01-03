@@ -1,8 +1,7 @@
 pub mod bruno;
-pub mod postman;
 pub mod openapi;
+pub mod postman;
 
 pub use bruno::BrunoParser;
-pub use postman::PostmanParser;
 pub use openapi::OpenApiParser;
-
+pub use postman::PostmanParser;

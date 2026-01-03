@@ -4,7 +4,11 @@
 pub enum AuthType {
     StaticToken(String),
     ApiKey(String),
-    OAuth2 { client_id: String, client_secret: String, token_url: String },
+    OAuth2 {
+        client_id: String,
+        client_secret: String,
+        token_url: String,
+    },
     Cookie(String),
     Session(String),
 }

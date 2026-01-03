@@ -1,10 +1,9 @@
 /// Integration tests for API collection parsers
 /// Tests OpenAPI, Postman, and Bruno parsers
-
 use doppel::models::CollectionParser;
+use doppel::parsers::bruno::BrunoParser;
 use doppel::parsers::openapi::OpenApiParser;
 use doppel::parsers::postman::PostmanParser;
-use doppel::parsers::bruno::BrunoParser;
 use std::fs;
 
 #[test]
@@ -75,21 +74,40 @@ fn test_openapi_basic_parsing() {
     assert_eq!(endpoints.len(), 3, "Should parse 3 endpoints");
 
     // Verify GET /users
-    let get_users = endpoints.iter().find(|e| e.path.contains("/users") && e.method.to_string() == "GET" && !e.path.contains("ID_PARAM"));
+    let get_users = endpoints.iter().find(|e| {
+        e.path.contains("/users") && e.method.to_string() == "GET" && !e.path.contains("ID_PARAM")
+    });
     assert!(get_users.is_some(), "Should have GET /users endpoint");
     assert_eq!(get_users.unwrap().path, "https://api.example.com/v1/users");
 
     // Verify POST /users with body parameters
-    let post_users = endpoints.iter().find(|e| e.path.contains("/users") && e.method.to_string() == "POST");
+    let post_users = endpoints
+        .iter()
+        .find(|e| e.path.contains("/users") && e.method.to_string() == "POST");
     assert!(post_users.is_some(), "Should have POST /users endpoint");
     let post_endpoint = post_users.unwrap();
-    assert!(post_endpoint.params.iter().any(|p| p.contains("body.name")), "Should extract body.name parameter");
-    assert!(post_endpoint.params.iter().any(|p| p.contains("body.email")), "Should extract body.email parameter");
+    assert!(
+        post_endpoint.params.iter().any(|p| p.contains("body.name")),
+        "Should extract body.name parameter"
+    );
+    assert!(
+        post_endpoint
+            .params
+            .iter()
+            .any(|p| p.contains("body.email")),
+        "Should extract body.email parameter"
+    );
 
     // Verify GET /users/ID_PARAM with path parameter
     let get_user_by_id = endpoints.iter().find(|e| e.path.contains("ID_PARAM"));
-    assert!(get_user_by_id.is_some(), "Should have GET endpoint with ID parameter");
-    assert!(get_user_by_id.unwrap().params.contains(&"id".to_string()), "Should extract id parameter");
+    assert!(
+        get_user_by_id.is_some(),
+        "Should have GET endpoint with ID parameter"
+    );
+    assert!(
+        get_user_by_id.unwrap().params.contains(&"id".to_string()),
+        "Should extract id parameter"
+    );
 }
 
 #[test]
@@ -133,7 +151,11 @@ fn test_openapi_path_traversal_protection() {
 
     // The malicious reference should be ignored, so we should still get the endpoint
     let endpoints = result.unwrap();
-    assert_eq!(endpoints.len(), 1, "Should have 1 endpoint despite malicious ref");
+    assert_eq!(
+        endpoints.len(),
+        1,
+        "Should have 1 endpoint despite malicious ref"
+    );
 }
 
 #[test]
@@ -263,8 +285,15 @@ fn test_bruno_basic_parsing() {
     let endpoints = result.unwrap();
 
     assert_eq!(endpoints.len(), 1, "Should parse 1 endpoint");
-    assert_eq!(endpoints[0].method.to_string(), "GET", "Should be GET method");
-    assert!(endpoints[0].path.contains("users"), "Should contain 'users' in path");
+    assert_eq!(
+        endpoints[0].method.to_string(),
+        "GET",
+        "Should be GET method"
+    );
+    assert!(
+        endpoints[0].path.contains("users"),
+        "Should contain 'users' in path"
+    );
 }
 
 #[test]
@@ -284,11 +313,14 @@ fn test_bruno_multiple_methods() {
     for (method, filename) in &methods {
         let file_path = format!("{}/{}", test_dir, filename);
         // Bruno parser expects JSON-like format with method and url fields
-        let content = format!(r##"{{
+        let content = format!(
+            r##"{{
   "method": "{}",
   "url": "https://api.example.com/users"
 }}
-"##, method);
+"##,
+            method
+        );
 
         fs::write(&file_path, content).expect("Should write Bruno file");
     }
@@ -309,8 +341,11 @@ fn test_bruno_multiple_methods() {
 
     // Verify each method is present
     for (method, _) in &methods {
-        assert!(endpoints.iter().any(|e| e.method.to_string() == *method),
-            "Should have {} endpoint", method);
+        assert!(
+            endpoints.iter().any(|e| e.method.to_string() == *method),
+            "Should have {} endpoint",
+            method
+        );
     }
 }
 
@@ -324,11 +359,17 @@ fn test_invalid_json_handling() {
 
     let openapi_parser = OpenApiParser;
     let openapi_result = openapi_parser.parse(test_file);
-    assert!(openapi_result.is_err(), "Should return error for invalid JSON");
+    assert!(
+        openapi_result.is_err(),
+        "Should return error for invalid JSON"
+    );
 
     let postman_parser = PostmanParser;
     let postman_result = postman_parser.parse(test_file);
-    assert!(postman_result.is_err(), "Should return error for invalid JSON");
+    assert!(
+        postman_result.is_err(),
+        "Should return error for invalid JSON"
+    );
 
     // Clean up
     let _ = fs::remove_file(test_file);
@@ -342,7 +383,10 @@ fn test_missing_file_handling() {
     let openapi_parser = OpenApiParser;
     let result = openapi_parser.parse(nonexistent_file);
     assert!(result.is_err(), "Should return error for missing file");
-    assert!(result.unwrap_err().contains("Failed to read"), "Error should mention file read failure");
+    assert!(
+        result.unwrap_err().contains("Failed to read"),
+        "Error should mention file read failure"
+    );
 }
 
 #[test]
@@ -399,8 +443,12 @@ fn test_openapi_with_refs() {
 
     // Verify that $ref was resolved and parameters extracted
     let post_endpoint = &endpoints[0];
-    assert!(post_endpoint.params.iter().any(|p| p.contains("username")),
-        "Should resolve ref and extract username parameter");
-    assert!(post_endpoint.params.iter().any(|p| p.contains("email")),
-        "Should resolve ref and extract email parameter");
+    assert!(
+        post_endpoint.params.iter().any(|p| p.contains("username")),
+        "Should resolve ref and extract username parameter"
+    );
+    assert!(
+        post_endpoint.params.iter().any(|p| p.contains("email")),
+        "Should resolve ref and extract email parameter"
+    );
 }

@@ -1,6 +1,6 @@
 // Demo test showing smart parameter detection in action
-use doppel::parameters::{analyze_endpoint_parameters, get_high_risk_params, ParameterDetector};
 use doppel::models::{Endpoint, Method, ParameterLocation};
+use doppel::parameters::{analyze_endpoint_parameters, get_high_risk_params, ParameterDetector};
 
 #[test]
 fn demo_smart_detection_on_realistic_api() {
@@ -34,7 +34,11 @@ fn demo_smart_detection_on_realistic_api() {
             Method::GET,
             "/api/v1/search".to_string(),
             Some("Search".to_string()),
-            vec!["query".to_string(), "limit".to_string(), "offset".to_string()],
+            vec![
+                "query".to_string(),
+                "limit".to_string(),
+                "offset".to_string(),
+            ],
         ),
         // High-risk: Delete user
         Endpoint::new(
@@ -55,10 +59,19 @@ fn demo_smart_detection_on_realistic_api() {
         total_params += all_params.len();
         high_risk_params += high_risk.len();
 
-        println!("{} {} - {} parameters", endpoint.method, endpoint.path, all_params.len());
+        println!(
+            "{} {} - {} parameters",
+            endpoint.method,
+            endpoint.path,
+            all_params.len()
+        );
 
         for param in &all_params {
-            let marker = if param.bola_risk_score >= 50 { "✓ TESTING" } else { "✗ SKIPPING" };
+            let marker = if param.bola_risk_score >= 50 {
+                "✓ TESTING"
+            } else {
+                "✗ SKIPPING"
+            };
             println!(
                 "  {} {} (risk: {}, type: {:?}, confidence: {:?})",
                 marker, param.name, param.bola_risk_score, param.param_type, param.confidence
@@ -71,26 +84,38 @@ fn demo_smart_detection_on_realistic_api() {
     println!("Total parameters: {}", total_params);
     println!("High-risk (tested): {}", high_risk_params);
     println!("Low-risk (skipped): {}", total_params - high_risk_params);
-    println!("Efficiency gain: {:.1}% reduction in tests\n",
-             (total_params - high_risk_params) as f32 / total_params as f32 * 100.0);
+    println!(
+        "Efficiency gain: {:.1}% reduction in tests\n",
+        (total_params - high_risk_params) as f32 / total_params as f32 * 100.0
+    );
 
     // Assertions to verify smart detection works correctly
     assert!(total_params > 0, "Should detect parameters");
     assert!(high_risk_params > 0, "Should identify high-risk parameters");
-    assert!(high_risk_params < total_params, "Should filter out some low-risk parameters");
+    assert!(
+        high_risk_params < total_params,
+        "Should filter out some low-risk parameters"
+    );
 
     // Verify specific high-risk parameters are detected
     let user_endpoint = &endpoints[0];
     let user_params = analyze_endpoint_parameters(user_endpoint);
     assert_eq!(user_params.len(), 1);
-    assert!(user_params[0].bola_risk_score >= 80, "userId in GET /users should be very high risk");
+    assert!(
+        user_params[0].bola_risk_score >= 80,
+        "userId in GET /users should be very high risk"
+    );
 
     // Verify search endpoint parameters are low risk
     let search_endpoint = &endpoints[3];
     let search_params = analyze_endpoint_parameters(search_endpoint);
     assert_eq!(search_params.len(), 3);
     for param in &search_params {
-        assert!(param.bola_risk_score < 50, "{} should be low risk", param.name);
+        assert!(
+            param.bola_risk_score < 50,
+            "{} should be low risk",
+            param.name
+        );
     }
 }
 
@@ -100,14 +125,62 @@ fn demo_risk_score_distribution() {
 
     // Test various parameter types across different contexts
     let test_cases = vec![
-        ("userId", "/api/users/{userId}", "GET", ParameterLocation::Path, true),
-        ("userId", "/api/users", "POST", ParameterLocation::Body, true),
-        ("accountId", "/api/accounts/{accountId}", "DELETE", ParameterLocation::Path, true),
-        ("orderId", "/api/orders/{orderId}", "GET", ParameterLocation::Path, true),
-        ("id", "/api/items/{id}", "PUT", ParameterLocation::Path, true),
-        ("email", "/api/users", "GET", ParameterLocation::Query, false),
-        ("search", "/api/posts", "GET", ParameterLocation::Query, false),
-        ("limit", "/api/posts", "GET", ParameterLocation::Query, false),
+        (
+            "userId",
+            "/api/users/{userId}",
+            "GET",
+            ParameterLocation::Path,
+            true,
+        ),
+        (
+            "userId",
+            "/api/users",
+            "POST",
+            ParameterLocation::Body,
+            true,
+        ),
+        (
+            "accountId",
+            "/api/accounts/{accountId}",
+            "DELETE",
+            ParameterLocation::Path,
+            true,
+        ),
+        (
+            "orderId",
+            "/api/orders/{orderId}",
+            "GET",
+            ParameterLocation::Path,
+            true,
+        ),
+        (
+            "id",
+            "/api/items/{id}",
+            "PUT",
+            ParameterLocation::Path,
+            true,
+        ),
+        (
+            "email",
+            "/api/newsletter",
+            "POST",
+            ParameterLocation::Body,
+            false,
+        ),
+        (
+            "search",
+            "/api/posts",
+            "GET",
+            ParameterLocation::Query,
+            false,
+        ),
+        (
+            "limit",
+            "/api/posts",
+            "POST",
+            ParameterLocation::Body,
+            false,
+        ),
         ("name", "/api/users", "POST", ParameterLocation::Body, false),
     ];
 
@@ -117,13 +190,26 @@ fn demo_risk_score_distribution() {
     let mut low_risk = 0;
 
     for (name, path, method, location, required) in test_cases {
-        let param = ParameterDetector::analyze_parameter(name, path, method, location.clone(), required);
+        let param =
+            ParameterDetector::analyze_parameter(name, path, method, location.clone(), required);
 
         let risk_category = match param.bola_risk_score {
-            80..=100 => { very_high_risk += 1; "VERY HIGH" },
-            60..=79 => { high_risk += 1; "HIGH" },
-            30..=59 => { medium_risk += 1; "MEDIUM" },
-            _ => { low_risk += 1; "LOW" },
+            80..=100 => {
+                very_high_risk += 1;
+                "VERY HIGH"
+            }
+            60..=79 => {
+                high_risk += 1;
+                "HIGH"
+            }
+            30..=59 => {
+                medium_risk += 1;
+                "MEDIUM"
+            }
+            _ => {
+                low_risk += 1;
+                "LOW"
+            }
         };
 
         println!(
@@ -139,7 +225,10 @@ fn demo_risk_score_distribution() {
     println!("Low Risk (0-29):         {}\n", low_risk);
 
     // Verify we have good distribution
-    assert!(very_high_risk >= 2, "Should have some very high risk parameters");
+    assert!(
+        very_high_risk >= 2,
+        "Should have some very high risk parameters"
+    );
     assert!(low_risk >= 2, "Should have some low risk parameters");
 }
 
@@ -151,29 +240,33 @@ fn demo_confidence_levels() {
         // Very High Confidence
         ("userId", "/api/users/{userId}", "User ID in users endpoint"),
         ("user_id", "/api/profiles/{user_id}", "Snake case user ID"),
-        ("accountId", "/api/accounts/{accountId}", "Account ID in accounts endpoint"),
-
+        (
+            "accountId",
+            "/api/accounts/{accountId}",
+            "Account ID in accounts endpoint",
+        ),
         // High Confidence
         ("id", "/api/users/{id}", "Generic ID in specific context"),
-        ("postId", "/api/blog/posts/{postId}", "Post ID in posts endpoint"),
-
+        (
+            "postId",
+            "/api/blog/posts/{postId}",
+            "Post ID in posts endpoint",
+        ),
         // Medium/Low Confidence
         ("uuid", "/api/resources/{uuid}", "UUID without context"),
         ("identifier", "/api/data/{identifier}", "Generic identifier"),
     ];
 
     for (name, path, description) in test_cases {
-        let param = ParameterDetector::analyze_parameter(
-            name,
-            path,
-            "GET",
-            ParameterLocation::Path,
-            true,
-        );
+        let param =
+            ParameterDetector::analyze_parameter(name, path, "GET", ParameterLocation::Path, true);
 
         println!(
             "{:12} → Confidence: {:8?} (score: {}) - {}",
-            name, param.confidence, param.confidence.as_score(), description
+            name,
+            param.confidence,
+            param.confidence.as_score(),
+            description
         );
     }
     println!();

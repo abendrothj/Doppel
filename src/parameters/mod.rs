@@ -16,11 +16,11 @@
 //       ↑
 //   main.rs (uses scanner for planning)
 
-pub mod substitution;
 pub mod classifier;
 pub mod scanner;
+pub mod substitution;
 
 // Re-export commonly used items for convenience
-pub use substitution::*;
 pub use classifier::*;
 pub use scanner::*;
+pub use substitution::*;

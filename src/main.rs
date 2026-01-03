@@ -1,21 +1,21 @@
 // Main CLI entry point for Doppel
 // Uses clap for argument parsing
 
+use base64::{engine::general_purpose, Engine as _};
 use clap::{Arg, Command};
-use doppel::models::CollectionParser;
-use doppel::parsers::{BrunoParser, PostmanParser, OpenApiParser};
+use doppel::auth::{AuthStrategy, StaticTokenAuth};
 use doppel::engine::AttackEngine;
-use doppel::verdict::{decide_verdict, Verdict};
-use doppel::ollama::OllamaAnalyzer;
-use doppel::auth::{StaticTokenAuth, AuthStrategy};
+use doppel::models::CollectionParser;
 use doppel::mutator::mutate_param;
-use doppel::response_analysis::analyze_response_soft_fails;
-use doppel::reporting::{export_csv, export_markdown};
+use doppel::ollama::OllamaAnalyzer;
 use doppel::parameters::{get_high_risk_params, get_parameter_summary};
+use doppel::parsers::{BrunoParser, OpenApiParser, PostmanParser};
+use doppel::reporting::{export_csv, export_markdown};
+use doppel::response_analysis::analyze_response_soft_fails;
+use doppel::verdict::{decide_verdict, Verdict};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::path::Path;
-use base64::{Engine as _, engine::general_purpose};
 
 /// Extract user ID from JWT token by decoding the payload
 fn extract_user_id_from_jwt(token: &str) -> Option<String> {
@@ -36,9 +36,12 @@ fn extract_user_id_from_jwt(token: &str) -> Option<String> {
     let json: Value = serde_json::from_str(&payload_str).ok()?;
 
     // Try common JWT claim names for user ID
-    if let Some(user_id) = json.get("userId").or_else(|| json.get("user_id"))
+    if let Some(user_id) = json
+        .get("userId")
+        .or_else(|| json.get("user_id"))
         .or_else(|| json.get("sub"))
-        .or_else(|| json.get("id")) {
+        .or_else(|| json.get("id"))
+    {
         if let Some(id_str) = user_id.as_str() {
             return Some(id_str.to_string());
         }
@@ -55,7 +58,8 @@ mod tests {
     fn extract_user_id_sub() {
         // header.payload.signature ; payload contains {"sub":"user_42"}
         // build a fake token with base64 payload for sub
-        let fake_payload = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(b"{\"sub\":\"user_42\"}");
+        let fake_payload =
+            base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(b"{\"sub\":\"user_42\"}");
         let token = format!("aaa.{}.ccc", fake_payload);
         let id = extract_user_id_from_jwt(&token);
         assert_eq!(id.unwrap(), "user_42");
@@ -134,12 +138,22 @@ async fn main() {
             .help("Display parameter analysis for each endpoint before testing"))
         .get_matches();
 
-
-    let input = matches.get_one::<String>("input").expect("input is required");
-    let base_url = matches.get_one::<String>("base_url").expect("base_url is required");
-    let attacker_token = matches.get_one::<String>("attacker_token").expect("attacker_token is required");
-    let victim_id = matches.get_one::<String>("victim_id").expect("victim_id is required");
-    let ollama_model = matches.get_one::<String>("ollama_model").map(|s| s.as_str()).unwrap_or("llama2");
+    let input = matches
+        .get_one::<String>("input")
+        .expect("input is required");
+    let base_url = matches
+        .get_one::<String>("base_url")
+        .expect("base_url is required");
+    let attacker_token = matches
+        .get_one::<String>("attacker_token")
+        .expect("attacker_token is required");
+    let victim_id = matches
+        .get_one::<String>("victim_id")
+        .expect("victim_id is required");
+    let ollama_model = matches
+        .get_one::<String>("ollama_model")
+        .map(|s| s.as_str())
+        .unwrap_or("llama2");
     let mutational_fuzzing = !matches.get_flag("no_mutational_fuzzing");
     let pii_analysis = matches.get_flag("enable_pii_analysis");
     let soft_fail_analysis = !matches.get_flag("no_soft_fail_analysis");
@@ -150,8 +164,10 @@ async fn main() {
         eprintln!("   Ensure Ollama is running LOCALLY ONLY and not exposed to external networks.");
         eprintln!("   This feature sends potentially sensitive data to the LLM for analysis.\n");
     }
-    let csv_report = matches.get_flag("csv_report") || (!matches.get_flag("markdown_report") && !matches.get_flag("pdf_report"));
-    let markdown_report = matches.get_flag("markdown_report") || (!matches.get_flag("csv_report") && !matches.get_flag("pdf_report"));
+    let csv_report = matches.get_flag("csv_report")
+        || (!matches.get_flag("markdown_report") && !matches.get_flag("pdf_report"));
+    let markdown_report = matches.get_flag("markdown_report")
+        || (!matches.get_flag("csv_report") && !matches.get_flag("pdf_report"));
     let pdf_report = matches.get_flag("pdf_report");
     let min_risk_score = *matches.get_one::<u8>("min_risk_score").unwrap_or(&50);
     let show_param_analysis = matches.get_flag("show_param_analysis");
@@ -176,7 +192,10 @@ async fn main() {
             Ok(_) | Err(_) => Box::new(PostmanParser),
         }
     } else {
-        eprintln!("Unsupported input type: {}. Use a Bruno directory or Postman/OpenAPI .json file.", input);
+        eprintln!(
+            "Unsupported input type: {}. Use a Bruno directory or Postman/OpenAPI .json file.",
+            input
+        );
         std::process::exit(2);
     };
 
@@ -189,16 +208,28 @@ async fn main() {
 
     // Initialize attack engine, authentication, and Ollama analyzer
     let engine = AttackEngine::new();
-    let auth = StaticTokenAuth { token: attacker_token.to_string() };
+    let auth = StaticTokenAuth {
+        token: attacker_token.to_string(),
+    };
     let ollama = OllamaAnalyzer::new(ollama_model.to_string());
 
     // Warm up Ollama if PII analysis is enabled (speeds up first request)
+    // Warm up Ollama if PII analysis is enabled
     if pii_analysis {
-        if let Err(e) = ollama.warmup().await {
-            eprintln!("⚠️  Ollama warmup failed: {}. PII analysis may be slow or unavailable.", e);
-            eprintln!("    Make sure Ollama is running locally with: ollama serve");
-        } else {
-            println!("✓ Ollama warmed up successfully");
+        println!("🤖 Initializing Local AI (Ollama)...");
+        match ollama.warmup().await {
+            Ok(_) => println!("   ✓ Connected to Ollama (localhost:11434)"),
+            Err(e) => {
+                eprintln!("\n❌ ERROR: Could not connect to local AI service.");
+                eprintln!("   Details: {}", e);
+                eprintln!("   ---------------------------------------------------");
+                eprintln!("   To fix this:");
+                eprintln!("   1. Install Ollama from https://ollama.ai");
+                eprintln!("   2. Run 'ollama serve' in a separate terminal");
+                eprintln!("   3. Ensure you have the model pulled: 'ollama pull llama3'");
+                eprintln!("   ---------------------------------------------------\n");
+                // Optional: std::process::exit(1) if you want to be strict
+            }
         }
     }
 
@@ -218,25 +249,36 @@ async fn main() {
 
         if high_risk_params.is_empty() {
             if show_param_analysis {
-                println!("  ⏭️  Skipping endpoint - no parameters meet minimum risk score of {}", min_risk_score);
+                println!(
+                    "  ⏭️  Skipping endpoint - no parameters meet minimum risk score of {}",
+                    min_risk_score
+                );
             }
             continue;
         }
 
         total_high_risk_params += high_risk_params.len();
         if show_param_analysis {
-            println!("  ✓ Testing {} high-risk parameter(s)", high_risk_params.len());
+            println!(
+                "  ✓ Testing {} high-risk parameter(s)",
+                high_risk_params.len()
+            );
         }
         // If endpoint.path already contains full URL (from OpenAPI servers), use it directly
         // Otherwise, prepend base_url
-        let base_path = if endpoint.path.starts_with("http://") || endpoint.path.starts_with("https://") {
-            endpoint.path.clone()
-        } else {
-            format!("{}{}", base_url, endpoint.path)
-        };
+        let base_path =
+            if endpoint.path.starts_with("http://") || endpoint.path.starts_with("https://") {
+                endpoint.path.clone()
+            } else {
+                format!("{}{}", base_url, endpoint.path)
+            };
 
         let method = format!("{:?}", endpoint.method);
-        let fuzz_inputs = if mutational_fuzzing { mutate_param(&victim_id) } else { vec![victim_id.to_string()] };
+        let fuzz_inputs = if mutational_fuzzing {
+            mutate_param(&victim_id)
+        } else {
+            vec![victim_id.to_string()]
+        };
         for mutated in fuzz_inputs {
             // Categorize parameters by type - only test high-risk ones
             let mut path_params = HashMap::new();
@@ -297,7 +339,7 @@ async fn main() {
                         status,
                         &body_text,
                         attacker_id.as_deref(),
-                        Some(victim_id.as_str())
+                        Some(victim_id.as_str()),
                     );
                     let mut result_str = match verdict {
                         Verdict::Vulnerable => "VULNERABLE".to_string(),
@@ -316,7 +358,8 @@ async fn main() {
                             if let Ok(json) = serde_json::from_str::<Value>(&body_text) {
                                 match ollama.analyze_response(&json).await {
                                     Ok(analysis) => {
-                                        let pii_status = if analysis.contains_pii { "YES" } else { "NO" };
+                                        let pii_status =
+                                            if analysis.contains_pii { "YES" } else { "NO" };
                                         result_str.push_str(&format!(" | PII: {}", pii_status));
                                     }
                                     Err(e) => {
@@ -339,7 +382,8 @@ async fn main() {
     }
 
     // Count vulnerabilities for exit code
-    let vulnerability_count = results.iter()
+    let vulnerability_count = results
+        .iter()
         .filter(|(_, _, verdict)| verdict.starts_with("VULNERABLE"))
         .count();
 
@@ -361,7 +405,10 @@ async fn main() {
     // Print summary
     println!("\n=== SCAN SUMMARY ===");
     println!("Total endpoints tested: {}", results.len());
-    println!("High-risk parameters identified: {}", total_high_risk_params);
+    println!(
+        "High-risk parameters identified: {}",
+        total_high_risk_params
+    );
     println!("Minimum risk score threshold: {}", min_risk_score);
     println!("Vulnerabilities found: {}", vulnerability_count);
 

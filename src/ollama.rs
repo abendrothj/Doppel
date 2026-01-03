@@ -113,7 +113,8 @@ impl OllamaAnalyzer {
         });
 
         // Send request with timeout
-        let resp = self.client
+        let resp = self
+            .client
             .post(OLLAMA_URL)
             .json(&req_body)
             .send()
@@ -169,7 +170,8 @@ mod tests {
     fn test_ollama_url_is_localhost() {
         // Ensure hardcoded URL is localhost only (security check)
         assert!(
-            OLLAMA_URL.starts_with("http://localhost:") || OLLAMA_URL.starts_with("http://127.0.0.1:"),
+            OLLAMA_URL.starts_with("http://localhost:")
+                || OLLAMA_URL.starts_with("http://127.0.0.1:"),
             "Ollama URL must be localhost only for security"
         );
     }

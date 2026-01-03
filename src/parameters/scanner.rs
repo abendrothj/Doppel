@@ -19,8 +19,8 @@
 //
 // Used by: main.rs during scan planning and execution
 
+use super::classifier::{DetectedParameter, ParameterDetector};
 use crate::models::{Endpoint, ParameterLocation};
-use super::classifier::{ParameterDetector, DetectedParameter};
 
 /// Analyze all parameters in an endpoint and return prioritized list
 pub fn analyze_endpoint_parameters(endpoint: &Endpoint) -> Vec<DetectedParameter> {
@@ -75,7 +75,10 @@ pub fn get_parameter_summary(endpoint: &Endpoint) -> String {
     let params = analyze_endpoint_parameters(endpoint);
 
     if params.is_empty() {
-        return format!("{} {} - No parameters detected", endpoint.method, endpoint.path);
+        return format!(
+            "{} {} - No parameters detected",
+            endpoint.method, endpoint.path
+        );
     }
 
     let mut summary = format!(
@@ -85,13 +88,11 @@ pub fn get_parameter_summary(endpoint: &Endpoint) -> String {
         params.len()
     );
 
-    for param in params.iter().take(5) {  // Limit to top 5
+    for param in params.iter().take(5) {
+        // Limit to top 5
         summary.push_str(&format!(
             "  - {} (risk: {}, type: {:?}, confidence: {:?})\n",
-            param.name,
-            param.bola_risk_score,
-            param.param_type,
-            param.confidence
+            param.name, param.bola_risk_score, param.param_type, param.confidence
         ));
     }
 
@@ -114,7 +115,10 @@ mod tests {
 
         let params = analyze_endpoint_parameters(&endpoint);
         assert_eq!(params.len(), 1);
-        assert!(params[0].bola_risk_score > 70, "userId in GET should be high risk");
+        assert!(
+            params[0].bola_risk_score > 70,
+            "userId in GET should be high risk"
+        );
     }
 
     #[test]
@@ -158,11 +162,7 @@ mod tests {
             Method::GET,
             "/api/users/{id}/posts/{postId}".to_string(),
             None,
-            vec![
-                "id".to_string(),
-                "postId".to_string(),
-                "limit".to_string(),
-            ],
+            vec!["id".to_string(), "postId".to_string(), "limit".to_string()],
         );
 
         let params = analyze_endpoint_parameters(&endpoint);

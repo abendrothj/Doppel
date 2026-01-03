@@ -16,13 +16,24 @@ impl AttackEngine {
             .unwrap();
         Self { client }
     }
-
-    pub async fn send_request(&self, method: &str, url: &str, token: &str, params: &HashMap<String, String>) -> Result<Response, reqwest::Error> {
+    pub async fn send_request(
+        &self,
+        method: &str,
+        url: &str,
+        token: &str,
+        params: &HashMap<String, String>,
+    ) -> Result<Response, reqwest::Error> {
         let mut req = self.client.request(method.parse().unwrap(), url);
         req = req.bearer_auth(token);
         for (k, v) in params {
             req = req.query(&[(k, v)]);
         }
         req.send().await
+    }
+}
+
+impl Default for AttackEngine {
+    fn default() -> Self {
+        Self::new()
     }
 }

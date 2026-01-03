@@ -21,8 +21,8 @@
 //
 // Used by: param_analyzer.rs for endpoint-level analysis
 
-use regex::Regex;
 use lazy_static::lazy_static;
+use regex::Regex;
 
 /// Parameter type classification
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -56,11 +56,11 @@ pub enum ParamType {
 /// Confidence level for parameter classification
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Confidence {
-    VeryHigh,  // 90-100% confidence
-    High,      // 70-89% confidence
-    Medium,    // 40-69% confidence
-    Low,       // 20-39% confidence
-    VeryLow,   // 0-19% confidence
+    VeryHigh, // 90-100% confidence
+    High,     // 70-89% confidence
+    Medium,   // 40-69% confidence
+    Low,      // 20-39% confidence
+    VeryLow,  // 0-19% confidence
 }
 
 impl Confidence {
@@ -81,7 +81,7 @@ pub struct DetectedParameter {
     pub name: String,
     pub param_type: ParamType,
     pub confidence: Confidence,
-    pub bola_risk_score: u8,  // 0-100, higher = more likely to be BOLA vulnerable
+    pub bola_risk_score: u8, // 0-100, higher = more likely to be BOLA vulnerable
     pub context: ParameterContext,
 }
 
@@ -92,7 +92,7 @@ pub struct ParameterContext {
     pub http_method: String,
     pub location: crate::models::ParameterLocation,
     pub is_required: bool,
-    pub related_resources: Vec<String>,  // e.g., "user", "account", "order"
+    pub related_resources: Vec<String>, // e.g., "user", "account", "order"
 }
 
 lazy_static! {
@@ -216,7 +216,7 @@ impl ParameterDetector {
                 if name.to_lowercase().contains("num") || name.chars().any(|c| c.is_ascii_digit()) {
                     return ParamType::NumericId;
                 }
-                return ParamType::ResourceId;  // Default to resource ID for generic IDs
+                return ParamType::ResourceId; // Default to resource ID for generic IDs
             }
         }
 
@@ -280,13 +280,12 @@ impl ParameterDetector {
         }
 
         // Exact name matches get high confidence
-        if matches!(param_type, ParamType::UserId | ParamType::ResourceId) {
-            if name.eq_ignore_ascii_case("id")
+        if matches!(param_type, ParamType::UserId | ParamType::ResourceId)
+            && (name.eq_ignore_ascii_case("id")
                 || name.eq_ignore_ascii_case("userId")
-                || name.eq_ignore_ascii_case("user_id")
-            {
-                score += 20;
-            }
+                || name.eq_ignore_ascii_case("user_id"))
+        {
+            score += 20;
         }
 
         // Convert score to confidence level
@@ -322,10 +321,10 @@ impl ParameterDetector {
 
         // HTTP method impact
         match http_method.to_uppercase().as_str() {
-            "GET" => risk_score += 25,      // Read operations are high risk
-            "DELETE" => risk_score += 20,   // Delete operations are high risk
-            "PUT" | "PATCH" => risk_score += 15,  // Update operations are medium risk
-            "POST" => risk_score += 10,     // Create operations are lower risk
+            "GET" => risk_score += 25,           // Read operations are high risk
+            "DELETE" => risk_score += 20,        // Delete operations are high risk
+            "PUT" | "PATCH" => risk_score += 15, // Update operations are medium risk
+            "POST" => risk_score += 10,          // Create operations are lower risk
             _ => {}
         }
 
@@ -342,7 +341,14 @@ impl ParameterDetector {
         }
 
         // Paths containing "user", "account", "profile" are high risk
-        let high_risk_resources = ["user", "account", "profile", "transaction", "payment", "order"];
+        let high_risk_resources = [
+            "user",
+            "account",
+            "profile",
+            "transaction",
+            "payment",
+            "order",
+        ];
         for resource in &high_risk_resources {
             if endpoint_path.to_lowercase().contains(resource) {
                 risk_score += 15;
@@ -386,7 +392,10 @@ impl ParameterDetector {
     }
 
     /// Filter parameters to only high-risk BOLA candidates
-    pub fn filter_high_risk(params: Vec<DetectedParameter>, min_risk_score: u8) -> Vec<DetectedParameter> {
+    pub fn filter_high_risk(
+        params: Vec<DetectedParameter>,
+        min_risk_score: u8,
+    ) -> Vec<DetectedParameter> {
         params
             .into_iter()
             .filter(|p| p.bola_risk_score >= min_risk_score)
@@ -418,10 +427,19 @@ mod tests {
 
     #[test]
     fn test_classify_user_id() {
-        assert_eq!(ParameterDetector::classify_type("userId"), ParamType::UserId);
-        assert_eq!(ParameterDetector::classify_type("user_id"), ParamType::UserId);
+        assert_eq!(
+            ParameterDetector::classify_type("userId"),
+            ParamType::UserId
+        );
+        assert_eq!(
+            ParameterDetector::classify_type("user_id"),
+            ParamType::UserId
+        );
         assert_eq!(ParameterDetector::classify_type("uid"), ParamType::UserId);
-        assert_eq!(ParameterDetector::classify_type("ownerId"), ParamType::UserId);
+        assert_eq!(
+            ParameterDetector::classify_type("ownerId"),
+            ParamType::UserId
+        );
     }
 
     #[test]
@@ -442,7 +460,10 @@ mod tests {
 
     #[test]
     fn test_classify_generic_id() {
-        assert_eq!(ParameterDetector::classify_type("id"), ParamType::ResourceId);
+        assert_eq!(
+            ParameterDetector::classify_type("id"),
+            ParamType::ResourceId
+        );
         assert_eq!(
             ParameterDetector::classify_type("postId"),
             ParamType::ResourceId
@@ -458,7 +479,10 @@ mod tests {
             ParameterLocation::Path,
             true,
         );
-        assert!(param.bola_risk_score >= 80, "userId in GET path should be very high risk");
+        assert!(
+            param.bola_risk_score >= 80,
+            "userId in GET path should be very high risk"
+        );
 
         let param2 = ParameterDetector::analyze_parameter(
             "name",
@@ -467,12 +491,17 @@ mod tests {
             ParameterLocation::Body,
             false,
         );
-        assert!(param2.bola_risk_score < 35, "Name in POST body should be low risk (got: {})", param2.bola_risk_score);
+        assert!(
+            param2.bola_risk_score < 35,
+            "Name in POST body should be low risk (got: {})",
+            param2.bola_risk_score
+        );
     }
 
     #[test]
     fn test_extract_resources() {
-        let resources = ParameterDetector::extract_related_resources("/api/users/{id}/orders/{orderId}");
+        let resources =
+            ParameterDetector::extract_related_resources("/api/users/{id}/orders/{orderId}");
         assert!(resources.contains(&"users".to_string()));
         assert!(resources.contains(&"orders".to_string()));
         assert!(!resources.contains(&"api".to_string()));
@@ -505,7 +534,10 @@ mod tests {
         ];
 
         let prioritized = ParameterDetector::prioritize_parameters(params);
-        assert_eq!(prioritized[0].name, "userId", "userId should be highest priority");
+        assert_eq!(
+            prioritized[0].name, "userId",
+            "userId should be highest priority"
+        );
     }
 
     #[test]
@@ -529,12 +561,18 @@ mod tests {
             "550e8400-e29b-41d4-a716-446655440000",
             &ParamType::Uuid
         ));
-        assert!(ParameterDetector::is_valid_id_format("12345", &ParamType::NumericId));
+        assert!(ParameterDetector::is_valid_id_format(
+            "12345",
+            &ParamType::NumericId
+        ));
         assert!(ParameterDetector::is_valid_id_format(
             "user@example.com",
             &ParamType::Email
         ));
-        assert!(ParameterDetector::is_valid_id_format("user_123", &ParamType::UserId));
+        assert!(ParameterDetector::is_valid_id_format(
+            "user_123",
+            &ParamType::UserId
+        ));
     }
 
     #[test]

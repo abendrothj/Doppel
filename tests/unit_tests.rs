@@ -1,7 +1,6 @@
 /// Unit tests for core Doppel modules
 /// Tests models, utilities, and helper functions
-
-use doppel::models::{Method, Endpoint, Parameter, ParameterLocation};
+use doppel::models::{Endpoint, Method, Parameter, ParameterLocation};
 
 #[test]
 fn test_method_display() {
@@ -55,12 +54,7 @@ fn test_endpoint_creation() {
 #[test]
 fn test_endpoint_without_description() {
     // Test creating an endpoint without description
-    let endpoint = Endpoint::new(
-        Method::POST,
-        "/api/users".to_string(),
-        None,
-        vec![],
-    );
+    let endpoint = Endpoint::new(Method::POST, "/api/users".to_string(), None, vec![]);
 
     assert_eq!(endpoint.method, Method::POST);
     assert_eq!(endpoint.description, None);
@@ -201,9 +195,9 @@ fn test_endpoint_with_mixed_params() {
         Some("Create post for user".to_string()),
         vec![
             "id".to_string(),           // path param
-            "published".to_string(),     // query param
-            "body.title".to_string(),    // body param
-            "body.content".to_string(),  // body param
+            "published".to_string(),    // query param
+            "body.title".to_string(),   // body param
+            "body.content".to_string(), // body param
         ],
     );
 

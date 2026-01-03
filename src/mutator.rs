@@ -16,12 +16,12 @@ pub fn mutate_param(param: &str) -> Vec<String> {
 
     // Add common BOLA test values
     mutations.extend(vec![
-        "0".to_string(),        // Often admin/system user
-        "1".to_string(),        // Often first user
-        "admin".to_string(),    // Common admin identifier
-        "-1".to_string(),       // Out of bounds test
-        "".to_string(),         // Empty value
-        "null".to_string(),     // Null string test
+        "0".to_string(),     // Often admin/system user
+        "1".to_string(),     // Often first user
+        "admin".to_string(), // Common admin identifier
+        "-1".to_string(),    // Out of bounds test
+        "".to_string(),      // Empty value
+        "null".to_string(),  // Null string test
     ]);
 
     // Deduplicate

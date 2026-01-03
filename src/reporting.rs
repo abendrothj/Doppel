@@ -1,9 +1,9 @@
 // Reporting and output for Doppel
 // Supports CSV, Markdown, and PDF export (PDF stub)
 
+use chrono::Local;
 use std::fs::File;
 use std::io::Write;
-use chrono::Local;
 
 /// Escape CSV field to prevent formula injection attacks
 /// Cells starting with =, +, -, @, or tab are prefixed with single quote
