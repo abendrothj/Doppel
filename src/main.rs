@@ -275,7 +275,7 @@ async fn main() {
 
         let method = format!("{:?}", endpoint.method);
         let fuzz_inputs = if mutational_fuzzing {
-            mutate_param(&victim_id)
+            mutate_param(victim_id)
         } else {
             vec![victim_id.to_string()]
         };

@@ -102,7 +102,7 @@ fn extract_base_and_number(param: &str) -> Option<(&str, usize)> {
 }
 
 /// Check if the number has leading zeros in the original string
-fn has_leading_zeros(param: &str, number: usize) -> bool {
+fn has_leading_zeros(param: &str, _number: usize) -> bool {
     if let Some((_, num_str_start)) = extract_base_and_number(param) {
         let num_str = &param[param.len() - count_digits(num_str_start)..];
         return num_str.starts_with('0') && num_str.len() > 1;
